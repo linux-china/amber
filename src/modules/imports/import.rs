@@ -147,7 +147,13 @@ impl Import {
                 ),
             }
         } else {
-            match fs::read_to_string(self.path.value.clone()) {
+            let mut module_path = self.path.value.clone();
+            if module_path.starts_with("~") {
+                if let Ok(home) = std::env::var("HOME") {
+                    module_path = module_path.replace("~", &home);
+                }
+            }
+            match fs::read_to_string(module_path) {
                 Ok(content) => Ok(content),
                 Err(err) => error!(meta, self.token_path.clone() => {
                     message: format!("Could not read file '{}'", self.path.value),
