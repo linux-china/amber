@@ -150,7 +150,7 @@ impl Import {
             let mut module_path = self.path.value.clone();
             if module_path.starts_with("~") {
                 if let Ok(home) = std::env::var("HOME") {
-                    module_path = module_path.replace("~", &home);
+                    module_path = format!("{}{}", home, &module_path[1..]);
                 }
             }
             match fs::read_to_string(module_path) {
