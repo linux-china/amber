@@ -22,10 +22,15 @@ impl And {
         let right = self.right.analyze_control_flow();
         match (left, right) {
             (Some(false), _) => Some(false),
-            (_, Some(false)) => Some(false),
+            (Some(true), Some(false)) => Some(false),
             (Some(true), Some(true)) => Some(true),
             _ => None,
         }
+    }
+
+    /// Check if this expression has side effects (function calls, commands, etc.)
+    pub fn has_side_effects(&self) -> bool {
+        self.left.has_side_effects() || self.right.has_side_effects()
     }
 
     pub fn extract_facts(&self) -> (HashMap<String, Type>, HashMap<String, Type>) {
@@ -107,9 +112,16 @@ impl TypeCheckModule for And {
 
 impl TranslateModule for And {
     fn translate(&self, meta: &mut TranslateMetadata) -> FragmentKind {
-        let left = self.left.translate(meta);
-        let right = self.right.translate(meta);
-        ConditionFragment::new(left, ComparisonOperator::And, right).to_frag()
+        match self.analyze_control_flow() {
+            Some(value) if !self.has_side_effects() => {
+                RawFragment::from((if value { "1" } else { "0" }).to_string()).to_frag()
+            }
+            Some(_) | None => {
+                let left = self.left.translate(meta);
+                let right = self.right.translate(meta);
+                ConditionFragment::new(left, ComparisonOperator::And, right).to_frag()
+            }
+        }
     }
 }
 
